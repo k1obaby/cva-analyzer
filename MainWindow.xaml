@@ -1,0 +1,447 @@
+<Window x:Class="CvaAnalyzer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:oxy="http://oxyplot.org/wpf"
+        xmlns:viewModels="clr-namespace:CvaAnalyzer.ViewModels"
+        Title="CvaAnalyzer - Анализ циклической вольтамперометрии" 
+        Height="780" Width="1100" 
+        FontFamily="Segoe UI" 
+        Background="#FAEBD7">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    </Window.Resources>
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Панель: загрузка эксперимента, фон, экспорт -->
+        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,10">
+            <Button Content="Загрузить эксперимент" 
+                    Click="LoadExperimentButton_Click"
+                    Width="180" Height="30"
+                    Margin="0,0,10,0"
+                    Background="#FF69B4" Foreground="White" 
+                    BorderBrush="#C71585" FontSize="13"/>
+
+            <TextBox Width="220"
+                     Text="{Binding ExperimentFileName}"
+                     IsReadOnly="True"
+                     VerticalAlignment="Center"
+                     Margin="0,0,10,0"/>
+
+            <Button Content="Экспорт данных"
+                    Command="{Binding ExportDataCommand}"
+                    Width="130" Height="30"
+                    Margin="0,0,10,0"
+                    Background="#3CB371" Foreground="White" 
+                    BorderBrush="#3DA662" FontSize="13"/>
+
+            <Button Content="Импортировать фон"
+                    Click="LoadBackgroundButton_Click"
+                    Width="150" Height="30"
+                    Margin="0,0,10,0"
+                    Background="#3CB371" Foreground="White" 
+                    BorderBrush="#3DA662" FontSize="13"/>
+
+            <ToggleButton Content="Показать фон"
+                     IsChecked="{Binding ShowBackground}" 
+                     IsEnabled="{Binding HasBackground}"
+                          Margin="0,0,10,0"
+                          Height="30"/>
+            <Button Content="Фон из файла"
+                    Command="{Binding UseBackgroundFromFileCommand}"
+                    IsEnabled="{Binding HasBackgroundFromFile}"
+                    Margin="0,0,10,0" Height="30"/>
+            <ToggleButton Content="Вычесть фон"
+                          IsChecked="{Binding SubtractBackground}"
+                          IsEnabled="{Binding HasBackground}"
+                          Height="30"/>
+        </StackPanel>
+
+        <!-- Блок вкладок: реакции, библиотека фонов, серия по скорости развертки -->
+        <Expander Grid.Row="1" Margin="0,0,0,10" IsExpanded="True"
+                  Header="Реакции / Фоны / Скорости развертки (нажмите, чтобы свернуть или развернуть)">
+            <TabControl>
+                <TabItem Header="Реакции">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="400">
+                        <StackPanel Margin="10">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Button Content="Загрузить из БД"
+                                        Command="{Binding LoadReactionsFromDbCommand}"
+                                        Height="28"
+                                        Margin="0,0,4,0"
+                                        Background="#3CB371" Foreground="White"
+                                        BorderBrush="#3DA662"
+                                        FontSize="11"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center"/>
+                                <Button Content="Импорт в БД"
+                                        Command="{Binding ImportReactionsToDbCommand}"
+                                        Height="28"
+                                        Margin="0,0,4,0"
+                                        Background="#3CB371" Foreground="White"
+                                        BorderBrush="#3DA662"
+                                        FontSize="11"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center"/>
+                                <Button Content="Показать из файла"
+                                        Command="{Binding LoadReactionsCommand}"
+                                        Height="28"
+                                        FontSize="11"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <TextBlock Text="E (поиск), В:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBox Width="70"
+                                         Text="{Binding PotentialSearchText}"
+                                         VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="±" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBox Width="50"
+                                         Text="{Binding PotentialToleranceText}"
+                                         VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <Button Content="Найти" Command="{Binding SearchByPotentialCommand}"/>
+                            </StackPanel>
+                        <DataGrid ItemsSource="{Binding Reactions}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  CanUserAddRows="False"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="All"
+                                  MinHeight="150"
+                                  MaxHeight="300">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Реакция" Binding="{Binding Reaction}" Width="*"/>
+                                <DataGridTextColumn Header="E0" Binding="{Binding E0}" Width="60"/>
+                                <DataGridTextColumn Header="E(pH)" Binding="{Binding AdjustedPotentialDisplay}" Width="60"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem Header="Фоны">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="400">
+                    <StackPanel Margin="10">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Button Content="Загрузить из БД"
+                                    Command="{Binding LoadBackgroundLibraryCommand}"
+                                    Height="28"
+                                    Margin="0,0,4,0"
+                                    Background="#3CB371" Foreground="White"
+                                    BorderBrush="#3DA662"
+                                    FontSize="11"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"/>
+                            <Button Content="Редактировать"
+                                    Command="{Binding EditSelectedBackgroundCommand}"
+                                    Height="28"
+                                    Margin="0,0,4,0"
+                                    FontSize="11"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"/>
+                            <Button Content="Удалить"
+                                    Command="{Binding DeleteSelectedBackgroundCommand}"
+                                    Height="28"
+                                    Margin="0,0,4,0"
+                                    FontSize="11"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"/>
+                            <Button Content="Фильтр"
+                                    Command="{Binding ApplyBackgroundFilterCommand}"
+                                    Height="28"
+                                    Margin="0,0,4,0"
+                                    FontSize="11"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"/>
+                            <Button Content="Очистить"
+                                    Command="{Binding ClearBackgroundFiltersCommand}"
+                                    Height="28"
+                                    Margin="0,0,4,0"
+                                    FontSize="11"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"/>
+                            <Button Content="Использовать"
+                                    Command="{Binding UseSelectedBackgroundCommand}"
+                                    Height="28"
+                                    FontSize="11"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="Фильтры:" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                            <TextBlock Text="Параметр:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ComboBox ItemsSource="{Binding FilterParameterNames}"
+                                      SelectedIndex="{Binding SelectedFilterParameterIndex}"
+                                      MinWidth="180"
+                                      Margin="0,0,6,0"/>
+                            <TextBlock Text="Значение:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBox Text="{Binding FilterValue}"
+                                      MinWidth="150"
+                                      Margin="0,0,6,0"/>
+                            <Button Content="Очистить"
+                                    Command="{Binding ClearBackgroundFiltersCommand}"
+                                    Padding="8,2"
+                                    Height="26"/>
+                        </StackPanel>
+                        <DataGrid ItemsSource="{Binding BackgroundLibrary}"
+                                  SelectedItem="{Binding SelectedBackground}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  CanUserAddRows="False"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="All"
+                                  MinHeight="120"
+                                  MaxHeight="300"
+                                  HorizontalScrollBarVisibility="Auto">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Образец" Binding="{Binding SampleName}" Width="120"/>
+                                <DataGridTextColumn Header="Скорость" Binding="{Binding Metadata.ScanRate}" Width="70"/>
+                                <DataGridTextColumn Header="Электролит" Binding="{Binding Metadata.Electrolyte}" Width="100"/>
+                                <DataGridTextColumn Header="Рабочий электрод" Binding="{Binding Metadata.WorkingElectrode}" Width="120"/>
+                                <DataGridTextColumn Header="Ссылочный электрод" Binding="{Binding Metadata.ReferenceElectrode}" Width="120"/>
+                                <DataGridTextColumn Header="Атмосфера" Binding="{Binding Metadata.Atmosphere}" Width="100"/>
+                                <DataGridTextColumn Header="Тип ячейки" Binding="{Binding Metadata.CellType}" Width="100"/>
+                                <DataGridTextColumn Header="Метод осаждения" Binding="{Binding Metadata.DepositionMethod}" Width="120"/>
+                                <DataGridTextColumn Header="Освещение" Binding="{Binding Metadata.Illumination}" Width="100"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem Header="Скорости развертки">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="500">
+                    <StackPanel Margin="10">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                            <Button Content="Загрузить серию"
+                                    Command="{Binding LoadScanRateSeriesCommand}"
+                                    Width="140" Height="28"
+                                    Margin="0,0,6,0"
+                                    Background="#3CB371" Foreground="White"
+                                    BorderBrush="#3DA662"
+                                    HorizontalAlignment="Left"/>
+                            <Button Content="Анализ"
+                                    Command="{Binding AnalyzeScanRateCommand}"
+                                    Width="100" Height="28"
+                                    Margin="0,0,6,0"
+                                    Background="#FFD700" Foreground="Black"
+                                    HorizontalAlignment="Left"/>
+                            <Button Content="Экспорт"
+                                    Command="{Binding ExportScanRateTableCommand}"
+                                    Width="100" Height="28"
+                                    HorizontalAlignment="Left"/>
+                        </StackPanel>
+                        <TextBlock Text="Скорости"/>
+                        <TextBox Text="{Binding ScanRatesInput}" Margin="0,2,0,6"/>
+                        <TextBlock Text="Потенциал"/>
+                        <TextBox Text="{Binding ScanRateTargetPotentialText}" Margin="0,2,0,6"/>
+                        <TextBlock Text="Координаты графика:" Margin="0,6,0,4"/>
+                        <ComboBox SelectedIndex="{Binding ScanRateTabCoordinateIndex}" Margin="0,0,0,6" MinWidth="220">
+                            <ComboBoxItem Content="Обычные (j от v)"/>
+                            <ComboBoxItem Content="С корнем (j от √v)"/>
+                        </ComboBox>
+                        <Border BorderBrush="#D0D0D0" BorderThickness="1" MinHeight="200" Margin="0,0,0,8">
+                            <oxy:PlotView Model="{Binding ScanRateTabPlotModel}" />
+                        </Border>
+                        <DataGrid ItemsSource="{Binding ScanRateTable}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  CanUserAddRows="False"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="All"
+                                  MinHeight="120"
+                                  MaxHeight="280">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="v" Binding="{Binding ScanRate}" Width="70"/>
+                                <DataGridTextColumn Header="j" Binding="{Binding CurrentDensity}" Width="90"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBlock Text="{Binding ScanRateFitInfo}" Margin="0,6,0,0"/>
+                        <TextBlock Text="{Binding ScanRateConclusion}" FontWeight="Bold" Foreground="#4B0082"/>
+                        <TextBlock Text="{Binding ScanRateGammaSurfaceResult}" Foreground="#C70039" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            </TabControl>
+        </Expander>
+
+        <!-- Область графика и боковая панель настроек -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto" MinWidth="280" MaxWidth="350"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0" x:Name="PlotAreaGrid">
+                <Border Background="White" BorderBrush="#D0D0D0" BorderThickness="1">
+                    <oxy:PlotView x:Name="MainPlotView" Model="{Binding CurrentPlotModel}"
+                                 PreviewMouseDown="MainPlotView_PreviewMouseDown" />
+                </Border>
+                <Canvas Panel.ZIndex="2">
+                    <Border x:Name="LegendOverlay"
+                            Canvas.Left="10"
+                            Canvas.Top="10"
+                            Visibility="{Binding HasLegendItems, Converter={StaticResource BoolToVisibilityConverter}}"
+                            Background="#F0FFFFFF"
+                            BorderBrush="Gray"
+                            BorderThickness="1"
+                            Padding="8,6"
+                            Cursor="SizeAll"
+                            MouseLeftButtonDown="LegendOverlay_MouseLeftButtonDown"
+                            MouseMove="LegendOverlay_MouseMove"
+                            MouseLeftButtonUp="LegendOverlay_MouseLeftButtonUp">
+                        <StackPanel>
+                            <TextBlock Text="Легенда" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <ItemsControl ItemsSource="{Binding CurrentLegendItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                            <Rectangle Width="14" Height="3" Fill="{Binding Color}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                            <TextBlock Text="{Binding Title}" FontSize="11"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </Canvas>
+            </Grid>
+
+            <ScrollViewer Grid.Column="1" Margin="10,0,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel MinWidth="280" MaxWidth="350">
+                    <TextBlock Text="Вид линии" Margin="0,0,0,4"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <ComboBox SelectedIndex="{Binding LineTypeIndex}" Width="140" Margin="0,0,6,0">
+                            <ComboBoxItem Content="Сплошная"/>
+                            <ComboBoxItem Content="Пунктирная"/>
+                            <ComboBoxItem Content="Точечная"/>
+                        </ComboBox>
+                        <Button Content="{Binding ZeroLineButtonText}"
+                                Command="{Binding AddZeroLineCommand}"
+                                Height="26"
+                                FontSize="10"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                ToolTip="Общая базовая линия по анодной и катодной ветви; опорная кривая для аппроксимации."/>
+                    </StackPanel>
+
+                    <TextBlock Text="Вид графика" Margin="0,0,0,4"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <ComboBox SelectedIndex="{Binding PlotSelectionIndex}" MinWidth="180" Margin="0,0,6,0">
+                            <ComboBoxItem Content="Ток и Потенциал"/>
+                            <ComboBoxItem Content="Потенциал и Ток"/>
+                            <ComboBoxItem Content="Потенциал и Время"/>
+                            <ComboBoxItem Content="Ток и Время"/>
+                            <ComboBoxItem Content="Заряд и Время"/>
+                            <ComboBoxItem Content="Плотность тока и скорость"/>
+                            <ComboBoxItem Content="Плотность тока и √скорости"/>
+                        </ComboBox>
+                        <Button Content="Вернуть вид графика"
+                                Command="{Binding ResetPlotViewCommand}"
+                                Height="26" FontSize="10"
+                                ToolTip="Сбросить масштаб и панораму графика"/>
+                    </StackPanel>
+
+                    <TextBlock Text="Легенду можно перетащить мышью по графику" Margin="0,0,0,10" FontSize="11" Foreground="#555"/>
+
+                    <TextBlock Text="Базовая линия" Margin="0,0,0,4"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="Степень полинома:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBox Width="40"
+                                 Text="{Binding BaselineDegreeText, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,0,6,0"/>
+                        <Button Content="Аппроксимировать базовую"
+                                Command="{Binding FitBaselineCommand}"
+                                FontSize="10"
+                                ToolTip="Полиномиальная базовая линия I(U) как основа для аппроксимации пиков."/>
+                    </StackPanel>
+
+                    <TextBlock Text="Вид аппроксимации" Margin="0,0,0,4"/>
+                    <ComboBox SelectedIndex="{Binding FitMethodIndex}" Margin="0,0,0,10">
+                        <ComboBoxItem Content="МНК (линейный)"/>
+                        <ComboBoxItem Content="Левенберг-Марквардт"/>
+                        <ComboBoxItem Content="Нелдер-Мида"/>
+                        <ComboBoxItem Content="Без аппроксимации"/>
+                    </ComboBox>
+
+                    <TextBlock Text="Форма пика" Margin="0,0,0,4"/>
+                    <ComboBox SelectedIndex="{Binding PeakShapeIndex}" Margin="0,0,0,10">
+                        <ComboBoxItem Content="Гаусса"/>
+                        <ComboBoxItem Content="Лоренца"/>
+                        <ComboBoxItem Content="Псевдо-Войгта"/>
+                    </ComboBox>
+
+                    <TextBlock Text="Количество катодных пиков"/>
+                    <TextBox Text="{Binding CathodicPeakCountText, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8"/>
+
+                    <TextBlock Text="Количество анодных пиков"/>
+                    <TextBox Text="{Binding AnodicPeakCountText, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8"/>
+
+                    <CheckBox Content="Режим расстановки пиков (клик по графику)"
+                              IsChecked="{Binding IsPeakPlacementMode}"
+                              Margin="0,0,0,6"/>
+                    <CheckBox Content="Показывать отдельные пики"
+                              IsChecked="{Binding ShowPeakComponents}"
+                              Margin="0,0,0,6"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <Button Content="Очистить расставленные пики"
+                                Command="{Binding ClearUserPlacedPeaksCommand}"
+                                IsEnabled="{Binding HasUserPlacedPeaks}"
+                                FontSize="10"/>
+                    </StackPanel>
+
+                    <TextBlock Text="pH раствора"/>
+                    <TextBox Text="{Binding ReactionPhText, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8"/>
+
+                <Button Content="Аппроксимировать" 
+                Command="{Binding FitGaussianCommand}" 
+                            Margin="0,0,0,8"
+                            Background="#FFD700" Foreground="Black"/>
+                    <Button Content="Очистить аппроксимацию"
+                            Command="{Binding ClearApproximationCommand}"
+                            IsEnabled="{Binding HasApproximation}"
+                            Margin="0,0,0,8" FontSize="10"/>
+
+                    <TextBlock Text="Вывод потенциалов превращений" Margin="0,0,0,4"/>
+                    <Button Content="Экспорт пиков"
+                            Command="{Binding ExportPeaksCommand}"
+                            Margin="0,0,0,10"
+                            Background="#3CB371" Foreground="White"
+                            BorderBrush="#3DA662"/>
+
+                    <TextBlock Text="Рассчитать Γ" Margin="0,0,0,4"/>
+                    <Button Content="Рассчитать Γ"
+                            Command="{Binding CalculateGammaCommand}"
+                            Margin="0,0,0,6"
+                            Background="#FF6F61" Foreground="White"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="n:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                        <TextBox Width="40" Text="{Binding GammaElectronCount, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0"/>
+                        <TextBlock Text="A, см²:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                        <TextBox Width="60" Text="{Binding GammaAreaCm2, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <CheckBox Content="Диапазон U" IsChecked="{Binding UseManualGammaRange}" Margin="0,0,6,0"/>
+                        <TextBox Width="50" Text="{Binding GammaRangeMin, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,4,0"/>
+                        <TextBlock Text="—" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                        <TextBox Width="50" Text="{Binding GammaRangeMax, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+
+                    <TextBlock Text="Поиск по потенциалу (В)" Margin="0,0,0,4"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBox Width="80" Text="{Binding PotentialSearchText, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0"/>
+                        <TextBlock Text="±" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBox Width="50" Text="{Binding PotentialToleranceText, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0"/>
+                        <Button Content="Найти" Command="{Binding SearchByPotentialCommand}"/>
+                    </StackPanel>
+
+                    <TextBlock Text="Результаты" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding GammaResult}" IsReadOnly="True" Height="60"/>
+            </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Window>
